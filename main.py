@@ -1,17 +1,10 @@
 import pygame
-from cars import player
-import Game
-import sys
-import ctypes
+from core.game_manager import GameManager
+
 pygame.init()
+win = pygame.display.set_mode((700, 700))
+pygame.display.set_caption("Multiplayer Car Game")
 
-win=pygame.display.set_mode((700,700))
-
-
-
-
-
-
-game=Game.game()
-game.input_name(win)
-game.create_lobby(win)
+if __name__ == "__main__":
+    game = GameManager(win)
+    game.run()
