@@ -24,7 +24,7 @@ def show_lobby(win, player,gamemanager):
                     return
                 elif action == "online":
                     from scenes.play_online import play_online
-                    play_online(win, player)
+                    play_online(win)
                     return
 
         win.fill((255, 255, 255))

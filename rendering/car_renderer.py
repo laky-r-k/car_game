@@ -46,3 +46,6 @@ class CarRenderer:
             (self.original_image.get_width() // 2, self.original_image.get_height() // 2)
         )
         self.mask = pygame.mask.from_surface(self.image)
+    
+    def get_rect(self):
+        return pygame.Rect(self.top_left, self.image.get_size())

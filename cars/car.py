@@ -32,7 +32,7 @@ class Car:
         self.decelerate()
         self.position[1] -= self.speed * cos(radians(self.theta))
         self.position[0] -= self.speed * sin(radians(self.theta))
-
+    
     def bounce(self, multiplier=-1.5):
         self.speed *= multiplier  # Reverse and possibly amplify the speed
         self.position[1] -= self.speed * cos(radians(self.theta))
@@ -51,3 +51,6 @@ class Car:
         self.position = [state['x'], state['y']]
         self.theta = state['theta']
         self.speed = state['speed']
+    def get_direction(self):
+        return ((self.speed/abs(self.speed))*sin(radians(self.theta)),(self.speed/abs(self.speed)*-cos(radians(self.theta))))
+

@@ -23,3 +23,4 @@ def display(text, surface, position, font_size=24, color=(0, 0, 0)):
     font = pygame.font.Font(None, font_size)
     rendered_text = font.render(text, True, color)
     surface.blit(rendered_text, position)
+
