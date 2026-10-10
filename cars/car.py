@@ -52,5 +52,13 @@ class Car:
         self.theta = state['theta']
         self.speed = state['speed']
     def get_direction(self):
-        return ((self.speed/abs(self.speed))*sin(radians(self.theta)),(self.speed/abs(self.speed)*-cos(radians(self.theta))))
+    # If the car isn't moving, it has no direction. Return a zero vector.
+        if self.speed == 0:
+            return (0, 0)
+        
+        # If the car is moving, the original calculation is safe.
+        direction_sign = self.speed / abs(self.speed)
+        dir_x = direction_sign * sin(radians(self.theta))
+        dir_y = direction_sign * -cos(radians(self.theta))
+        return (dir_x, dir_y)
 

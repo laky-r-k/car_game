@@ -16,11 +16,10 @@ from cars.car import Car
 from players.player import Player
 
 # ==============================================================================
-# SECTION 1: SERVER-SIDE HELPER FUNCTIONS AND CLASSES
+# SECTION 1: NETWORKING HELPER FUNCTIONS AND CLASSES
 # ==============================================================================
 
 def send_message(conn, data):
-    """Encodes, prefixes, and sends a message."""
     try:
         message = json.dumps(data).encode('utf-8')
         len_prefix = struct.pack('>I', len(message))
@@ -28,12 +27,11 @@ def send_message(conn, data):
     except (socket.error, OSError): pass
 
 def receive_message(conn):
-    """Receives a complete length-prefixed message."""
     try:
-        len_prefix = conn.recv(4);
+        len_prefix = conn.recv(4)
         if not len_prefix: return None
         msg_len = struct.unpack('>I', len_prefix)[0]
-        data = b'';
+        data = b''
         while len(data) < msg_len:
             packet = conn.recv(msg_len - len(data));
             if not packet: return None
@@ -42,17 +40,14 @@ def receive_message(conn):
     except (socket.error, struct.error, json.JSONDecodeError): return None
 
 class ServerCarRepresentation:
-    """A server-side helper to calculate a car's collision rect and mask."""
     def __init__(self, image_path):
-        # Load the image to get its properties, but we won't blit it
-        self.original_image = pygame.image.load(image_path).convert_alpha()
+        self.original_image = pygame.image.load(image_path)
         self.image = pygame.transform.scale(self.original_image, (self.original_image.get_width() // 2, self.original_image.get_height() // 2))
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
         self.top_left = (0, 0)
     
     def update(self, car_obj):
-        """Rotates the image (in memory) to get the new mask and rect for collision."""
         rotated_image = pygame.transform.rotate(self.image, car_obj.theta)
         self.rect = rotated_image.get_rect(center=car_obj.position)
         self.mask = pygame.mask.from_surface(rotated_image)
@@ -65,20 +60,17 @@ class ServerCarRepresentation:
 class GameThread(threading.Thread):
     def __init__(self, player1_conn, player1_addr, player2_conn, player2_addr):
         super().__init__()
-        # --- Standard setup ---
         self.game_state_lock = threading.Lock(); self.running = True
         self.game_id = str(uuid.uuid4()); self.input_queue = Queue()
         
-        # --- Player and Car setup ---
         player1 = Player(name="Player 1"); player1.choose_car("assets/red-car.png")
         player1.car.position = [60, 140]; player1.car.theta = 90
         player2 = Player(name="Player 2"); player2.choose_car("assets/purple-car.png")
         player2.car.position = [60, 180]; player2.car.theta = 90
+        
         self.players = { player1: {'conn': player1_conn}, player2: {'conn': player2_conn} }
         self.conn_to_player = { v['conn']: k for k, v in self.players.items() }
 
-        # --- NEW: Initialize Game Logic and Assets on Server ---
-        pygame.init() # Pygame needs to be initialized to use its modules
         self.game_logic = GameLogic(total_laps=3)
         track_border_img = pygame.image.load("assets/track-border.png")
         self.track_mask = pygame.mask.from_surface(track_border_img)
@@ -102,51 +94,70 @@ class GameThread(threading.Thread):
         self.running = False
 
     def run(self):
-        print(f"[NEW GAME] Starting game {self.game_id}...")
+        print(f"[NEW GAME] Starting game {self.gamAe_id}...")
         for player in self.players: self.game_logic.register_player(player)
         for data in self.players.values():
             threading.Thread(target=self.handle_player_input, args=(data['conn'],), daemon=True).start()
 
-        # ... (Send initial 'start' message as before) ...
+        # COMPLETED: Send the initial 'start' message
+        for player, data in self.players.items():
+            opponent = [p for p in self.players if p != player][0]
+            start_message = {
+                "type": "start", "your_name": player.name, "your_car_image": player.car_image_path,
+                "opponent_name": opponent.name, "opponent_car_image": opponent.car_image_path,
+                "initial_state": {p.name: p.car.get_state() for p in self.players},
+                "laps": self.game_logic.total_laps
+            }
+            send_message(data['conn'], start_message)
+
         self.game_logic.start()
 
         TICK_RATE = 30
         while self.running:
             start_time = time.time()
-            # ... (Process inputs from queue as before) ...
+            
+            # COMPLETED: Process inputs from the queue
+            while not self.input_queue.empty():
+                player, input_data = self.input_queue.get()
+                keys = input_data.get('keys', {})
+                if keys.get('UP'): player.car.move_forward()
+                if keys.get('DOWN'): player.car.move_backward()
+                if keys.get('LEFT'): player.car.rotate(left=True)
+                if keys.get('RIGHT'): player.car.rotate(right=True)
             
             with self.game_state_lock:
                 for player in self.players:
-                    # 1. Update car physics
                     player.car.update_position()
-                    
-                    # 2. Update server-side representation for collision
                     car_rep = self.server_cars[player]
                     car_rep.update(player.car)
-
-                    # 3. Check for wall collisions
                     if self.track_mask.overlap(car_rep.mask, car_rep.top_left):
                         player.car.bounce()
-
-                    # 4. Check for lap completion
                     if self.finish_line.check(player, car_rep.rect):
                         if self.lap_validator.check(player):
                             self.game_logic.lap_completed(player)
                             print(f"[GAME LOGIC] {player.name} completed a lap!")
-                    
-                    # 5. Check for a winner
                     if self.game_logic.player_laps.get(player, 0) >= self.game_logic.total_laps:
                         print(f"[GAME OVER] {player.name} wins!")
                         self.running = False
             
-            # ... (Broadcast game_state_packet as before) ...
+            # COMPLETED: Broadcast the game state
+            game_state_packet = {
+                "type": "game_update",
+                "states": {p.name: p.car.get_state() for p in self.players},
+                "laps": {p.name: laps for p, laps in self.game_logic.player_laps.items()}
+            }
+            self.broadcast(game_state_packet)
             
             time_to_sleep = (1 / TICK_RATE) - (time.time() - start_time)
             if time_to_sleep > 0: time.sleep(time_to_sleep)
 
-        # ... (Game over and cleanup as before) ...
+        print(f"[GAME OVER] Game {self.game_id} has ended.")
+        self.broadcast({"type": "end", "message": "Game over."})
+        for data in self.players.values(): data['conn'].close()
 
-
+# ==============================================================================
+# SECTION 3: THE GAMESERVER (Matchmaking)
+# ==============================================================================
 class GameServer:
     def __init__(self, host="127.0.0.1", port=65432):
         self.host = host; self.port = port
@@ -155,7 +166,10 @@ class GameServer:
         self.lobby = []; self.lobby_lock = threading.Lock()
 
     def _matchmaking(self, conn, addr):
+        print(f"[LOBBY] {addr} has connected...")
+        # CORRECTED: Use the send_message helper for proper framing
         send_message(conn, {"type": "status", "message": "Connected, waiting for match..."})
+        
         with self.lobby_lock:
             self.lobby.append((conn, addr))
             if len(self.lobby) >= 2:
@@ -175,6 +189,11 @@ class GameServer:
         except KeyboardInterrupt: print("\nServer shutting down.")
         finally: self.server_socket.close()
 
+# ==============================================================================
+# SECTION 4: MAIN EXECUTION
+# ==============================================================================
 if __name__ == "__main__":
+    # CORRECTED: Initialize Pygame ONCE at the start of the server process
+    pygame.init()
     server = GameServer()
     server.start()
