@@ -1,5 +1,5 @@
 from cars.car import Car
-from math import sin, cos, radians, sqrt
+from math import sin, sqrt
 import math
 
 # How close (in pixels) the AI needs to be to a waypoint to advance to the next one.
@@ -51,19 +51,6 @@ class AICar(Car):
         dy = ty - self.position[1]
         return sqrt(dx * dx + dy * dy)
 
-    def bounce(self, multiplier=-1.5):
-        """Override the base bounce so the AI doesn't oscillate against walls.
-
-        The base Car.bounce() multiplies speed by a negative value. When the car
-        is still overlapping the border on the next frame it bounces again —
-        negative × negative = positive — causing the speed to grow each frame and
-        the car to teleport wildly. For the AI, simply zeroing the speed and
-        nudging it backward is enough to escape the wall.
-        """
-        self.speed = 0
-        # Nudge backward so the car exits the border area cleanly
-        self.position[1] += 2 * cos(radians(self.theta))
-        self.position[0] += 2 * sin(radians(self.theta))
 
     def aimove(self):
         """Steer toward the current waypoint and advance when close enough.

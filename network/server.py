@@ -132,7 +132,8 @@ class GameThread(threading.Thread):
                     car_rep = self.server_cars[player]
                     car_rep.update(player.car)
                     if self.track_mask.overlap(car_rep.mask, car_rep.top_left):
-                        player.car.bounce()
+                        player.car.rollback_position()
+                        car_rep.update(player.car)  # re-sync mask to rolled-back position
                     if self.finish_line.check(player, car_rep.rect):
                         if self.lap_validator.check(player):
                             self.game_logic.lap_completed(player)

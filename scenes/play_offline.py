@@ -93,12 +93,15 @@ def play_offline(win, player):
         car_renderer.draw(win, car.position, car.theta)
         ai_car_renderer.draw(win,aicar.position,aicar.theta)
 
-        # Collision check
+        # Collision check — rollback to the pre-move position on border overlap.
+        # Redrawing after rollback keeps the renderer mask in sync this frame.
         if track_mask.overlap(car_renderer.mask, car_renderer.top_left):
-            car.bounce(-2)
-        if track_mask.overlap(ai_car_renderer.mask, ai_car_renderer.top_left):
-            aicar.bounce(-2)
+            car.rollback_position()
+            car_renderer.draw(win, car.position, car.theta)
 
+        if track_mask.overlap(ai_car_renderer.mask, ai_car_renderer.top_left):
+            aicar.rollback_position()
+            ai_car_renderer.draw(win, aicar.position, aicar.theta)
 
         if finish_line.check(player,car_renderer.get_rect()):
                 if lapse.check(player):
