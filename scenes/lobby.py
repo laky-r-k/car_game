@@ -18,7 +18,12 @@ def show_lobby(win, player,gamemanager):
                 exit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 action = ui.handle_mouse(pygame.mouse.get_pos())
-                if action == "offline" and player.car:
+                if action == "offline":
+                    # Auto-select the first owned car if the player hasn't chosen one yet,
+                    # so clicking Play Offline always works without needing a separate Choose step.
+                    if not player.car:
+                        manager.car_index = 0
+                        manager.choose()
                     from scenes.play_offline import play_offline
                     play_offline(win, player)
                     return
