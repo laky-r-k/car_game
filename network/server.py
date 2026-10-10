@@ -94,7 +94,7 @@ class GameThread(threading.Thread):
         self.running = False
 
     def run(self):
-        print(f"[NEW GAME] Starting game {self.gamAe_id}...")
+        print(f"[NEW GAME] Starting game {self.game_id}...")
         for player in self.players: self.game_logic.register_player(player)
         for data in self.players.values():
             threading.Thread(target=self.handle_player_input, args=(data['conn'],), daemon=True).start()
@@ -106,7 +106,8 @@ class GameThread(threading.Thread):
                 "type": "start", "your_name": player.name, "your_car_image": player.car_image_path,
                 "opponent_name": opponent.name, "opponent_car_image": opponent.car_image_path,
                 "initial_state": {p.name: p.car.get_state() for p in self.players},
-                "laps": self.game_logic.total_laps
+                "total_laps": self.game_logic.total_laps,
+                "message": "Game starting!"
             }
             send_message(data['conn'], start_message)
 
@@ -167,16 +168,19 @@ class GameServer:
 
     def _matchmaking(self, conn, addr):
         print(f"[LOBBY] {addr} has connected...")
-        # CORRECTED: Use the send_message helper for proper framing
         send_message(conn, {"type": "status", "message": "Connected, waiting for match..."})
-        
+
+        game_to_start = None
         with self.lobby_lock:
             self.lobby.append((conn, addr))
             if len(self.lobby) >= 2:
                 p1_conn, p1_addr = self.lobby.pop(0)
                 p2_conn, p2_addr = self.lobby.pop(0)
-                game = GameThread(p1_conn, p1_addr, p2_conn, p2_addr)
-                game.start()
+                game_to_start = GameThread(p1_conn, p1_addr, p2_conn, p2_addr)
+
+        # Start the game thread outside the lock so new clients can still connect
+        if game_to_start:
+            game_to_start.start()
 
     def start(self):
         self.server_socket.bind((self.host, self.port))

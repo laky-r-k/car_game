@@ -74,7 +74,11 @@ class GameClient:
                 
                 msg_type = message.get("type")
 
-                if msg_type == "start":
+                if msg_type == "status":
+                    # Server sends this while waiting for a second player to join
+                    print(f"[SERVER] {message.get('message', '')}")
+
+                elif msg_type == "start":
                     self.me = Player(name=message['your_name'])
                     self.me.choose_car(message['your_car_image'])
                     self.opponent = Player(name=message['opponent_name'])
