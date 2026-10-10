@@ -96,11 +96,9 @@ def play_offline(win, player):
         # Collision check
         if track_mask.overlap(car_renderer.mask, car_renderer.top_left):
             car.bounce(-2)
-        if track_mask.overlap(ai_car_renderer.mask,ai_car_renderer.top_left):
-             aicar.bounce(-2)
-        if ai_car_renderer.get_rect().collidepoint(aicar.get_current_point()):
-            aicar.update_path_point()
-            
+        if track_mask.overlap(ai_car_renderer.mask, ai_car_renderer.top_left):
+            aicar.bounce(-2)
+
 
         if finish_line.check(player,car_renderer.get_rect()):
                 if lapse.check(player):
