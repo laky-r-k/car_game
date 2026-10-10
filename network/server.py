@@ -116,6 +116,11 @@ class GameThread(threading.Thread):
         TICK_RATE = 30
         while self.running:
             start_time = time.time()
+
+            # Snapshot state before applying any inputs (fixes rotation collision bug!)
+            with self.game_state_lock:
+                for player in self.players:
+                    player.car.snapshot()
             
             # COMPLETED: Process inputs from the queue
             while not self.input_queue.empty():

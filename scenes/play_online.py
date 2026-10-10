@@ -15,9 +15,9 @@ def play_online(win):
         return # Exit if connection fails
 
     # --- ASSET LOADING ---
-    # ADDED: Complete asset loading
-    track = pygame.transform.scale(pygame.image.load("assets/track.png"), (700, 700))
-    track_border_img = pygame.transform.scale(pygame.image.load("assets/track-border.png"), (700, 700))
+    # ADDED: Complete asset loading (WITH proper conversions for huge speedup!)
+    track = pygame.transform.scale(pygame.image.load("assets/track.png").convert(), (700, 700))
+    track_border_img = pygame.transform.scale(pygame.image.load("assets/track-border.png").convert_alpha(), (700, 700))
     track_mask = pygame.mask.from_surface(track_border_img)
     finish_line_img = pygame.transform.scale(pygame.image.load("assets/finish.png"),(65,20)).convert_alpha()
     finish_line_pos = (21,180)

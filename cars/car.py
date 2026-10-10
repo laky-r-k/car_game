@@ -28,25 +28,22 @@ class Car:
         elif self.speed < 0:
             self.speed += 1
 
-    def update_position(self):
-        # Snapshot position before moving so rollback_position() can restore it
+    def snapshot(self):
+        """Save state before any inputs are processed this frame."""
         self._prev_position = list(self.position)
+        self._prev_theta = self.theta
+
+    def update_position(self):
         self.decelerate()
         self.position[1] -= self.speed * cos(radians(self.theta))
         self.position[0] -= self.speed * sin(radians(self.theta))
 
     def rollback_position(self):
-        """Undo the last movement step and stop the car.
-
-        Called when a collision is detected after update_position().
-        Restoring to the pre-move coordinate guarantees the car is never
-        inside the border mask, which prevents the speed-compounding
-        oscillation that bounce() caused:
-          bounce(-2): speed flips sign each frame (neg×neg=pos) → grows unboundedly.
-        """
+        """Undo the last movement and rotation step, and stop/bounce the car."""
         if hasattr(self, '_prev_position'):
             self.position = list(self._prev_position)
-        self.speed = 0
+            self.theta = self._prev_theta
+        self.speed = int(self.speed * -0.5) # gentle bounce
 
     def bounce(self, multiplier=-1.5):
         """Legacy reversal — kept for compatibility. Prefer rollback_position()

@@ -12,9 +12,9 @@ def drawpoints(win,points):
 def play_offline(win, player):
     clock = pygame.time.Clock()
 
-    # Load and scale track image and border
-    track = pygame.transform.scale(pygame.image.load("assets/track.png"), (700, 700))
-    track_border_img = pygame.transform.scale(pygame.image.load("assets/track-border.png"), (700, 700))
+    # Load and scale track image and border (WITH proper conversions for huge speedup!)
+    track = pygame.transform.scale(pygame.image.load("assets/track.png").convert(), (700, 700))
+    track_border_img = pygame.transform.scale(pygame.image.load("assets/track-border.png").convert_alpha(), (700, 700))
     track_mask = pygame.mask.from_surface(track_border_img)
 
     finish_line_img = pygame.transform.scale(pygame.image.load("assets/finish.png"),(65,20)).convert_alpha()
@@ -61,6 +61,10 @@ def play_offline(win, player):
     game.register_player(aiplayer)
 
     while game.state!="game_over" and run:
+        # Snapshot state before inputs are applied (fixes rotation collision bug!)
+        car.snapshot()
+        aicar.snapshot()
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run=False
@@ -88,7 +92,7 @@ def play_offline(win, player):
         win.fill((255, 255, 255))
         win.blit(track, (0, 0))
         win.blit(finish_line_img,finish_line_pos)
-        drawpoints(win,waypoints)
+        # drawpoints(win,waypoints) # Removed to save frame budget
         pygame.draw.rect(win,[250,250,250],finish_line_rect,3)
         car_renderer.draw(win, car.position, car.theta)
         ai_car_renderer.draw(win,aicar.position,aicar.theta)
