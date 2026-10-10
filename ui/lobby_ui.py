@@ -2,7 +2,7 @@ import pygame
 from ui.buttons import Button
 
 class LobbyUI:
-    def __init__(self, win, manager,gamemanager):
+    def __init__(self, win, manager, gamemanager):
         self.win = win
         self.manager = manager
 
@@ -16,6 +16,25 @@ class LobbyUI:
             "buy": Button("buy", [0,0,0], [100,100,0], 75, 100, (400,425),manager=gamemanager),
         }
 
+        # Pre-load and scale all car images once at startup to avoid per-frame disk I/O
+        self._car_image_cache = [
+            pygame.transform.scale(pygame.image.load(path), (125, 200))
+            for path in manager.car_list
+        ]
+        self._cached_index = manager.car_index
+
+    def _get_car_image(self):
+        """Return the cached image for the currently selected car.
+        Refreshes the cache entry if a new car path was added after init."""
+        idx = self.manager.car_index
+        if idx >= len(self._car_image_cache):
+            # A car was bought and added after init — load and cache it now
+            for path in self.manager.car_list[len(self._car_image_cache):]:
+                self._car_image_cache.append(
+                    pygame.transform.scale(pygame.image.load(path), (125, 200))
+                )
+        return self._car_image_cache[idx]
+
     def draw(self):
         p = self.manager.player
         car_index = self.manager.car_index
@@ -24,7 +43,7 @@ class LobbyUI:
         coin = self.font.render(f"Coins: {p.coins}", True, (0,0,0))
         cost = self.font.render(f"Cost: {self.manager.car_prices[car_index]}", True, (0,0,0))
 
-        car_image = pygame.transform.scale(pygame.image.load(self.manager.car_list[car_index]), (125,200))
+        car_image = self._get_car_image()
         pygame.draw.rect(self.win, [250,250,0], pygame.Rect(200,200,300,200))
 
         self.win.blit(name, (10,10))
